@@ -43,7 +43,7 @@ const App = () => {
       }
 
       const data = await response.json();
-      console.log(data);
+      console.log("Fetched movies data:", data);
 
       // TMDb API doesn't return "response" field like OMDB
       // Check if we have results
@@ -52,7 +52,10 @@ const App = () => {
         
         // Update search count if it's a search query and has results
         if (query && data.results.length > 0) {
+          console.log("Updating search count for:", query, data.results[0]);
           await updateSearchCount(query, data.results[0])
+          // Reload trending movies after updating search count
+          loadTrendingMovies();
         }
       } else {
         setMovieList([]);
@@ -70,7 +73,9 @@ const App = () => {
 
   const loadTrendingMovies = async () => {
     try {
+      console.log("Loading trending movies...");
       const movies = await getTrendingMovies();
+      console.log("Trending movies received:", movies);
 
       setTrendingMovies(movies || []);
     } catch (error) {
@@ -78,21 +83,19 @@ const App = () => {
     }
   }
 
-
-
   // Use debouncedSearchTerm instead of searchTerm for API calls
   useEffect(() => {
     fetchmovies(debouncedSearchTerm);
   }, [debouncedSearchTerm])
 
-  // Load popular movies on initial render
-  useEffect(() => {
-    fetchmovies(debouncedSearchTerm);
-  }, [debouncedSearchTerm]);
-
   useEffect(() => {
     loadTrendingMovies();
   }, []);
+
+  // Debug: Log trending movies state
+  useEffect(() => {
+    console.log("Trending movies state updated:", trendingMovies);
+  }, [trendingMovies]);
 
   return (
     <main>
@@ -110,15 +113,26 @@ const App = () => {
           <Search searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
         </header>
 
+        {/* Debug: Show trending movies count */}
+        <div style={{color: 'white', margin: '10px 0'}}>
+          Debug: Trending movies count: {trendingMovies.length}
+        </div>
+
         {trendingMovies.length > 0 && (
           <section className='trending'>
             <h2>Trending Movies</h2>
             <ul>
               {trendingMovies.map((movie, index) => (
-                <li key={movie.$id}>
+                <li key={movie.$id || movie.id}>
                   <p>{index+1}</p>
-                  <img src={movie.poster_url} alt={movie.title}/>
-
+                  <img 
+                    src={movie.poster_url || '/no-movie.png'} 
+                    alt={movie.title || movie.movieTitle}
+                    onError={(e) => {
+                      console.log("Image failed to load:", movie.poster_url);
+                      e.target.src = '/no-movie.png';
+                    }}
+                  />
                 </li>
               ))}
             </ul>
